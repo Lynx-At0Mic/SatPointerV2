@@ -37,9 +37,9 @@ satelliteName = sat_list[0]  # Satellite name
 curSatellite = ""
 sat_object = None
 
-lat = int(config["GROUND STATION"]["LAT"])  # position of device
-lng = int(config["GROUND STATION"]["LONG"])
-alt = int(config["GROUND STATION"]["ALT"])
+lat = float(config["GROUND STATION"]["LAT"])  # position of device
+lng = float(config["GROUND STATION"]["LONG"])
+alt = float(config["GROUND STATION"]["ALT"])
 
 dateandtime = datet(2020, 1, 1, 0, 0, 0)  # initilise time variable
 
@@ -58,7 +58,6 @@ class LCDmenu():
         self._dt = dt
         self._clklaststate = io.input(self._clk)
         self._clkcounter = 0
-        self._clickcounter = 0
 
         io.add_event_detect(self._clk, io.FALLING, callback=self.encoder_callback)
 
@@ -82,36 +81,33 @@ class LCDmenu():
             lcd.crlf()
 
     def incrementIndex(self):
-        self.setIndex(self._activeIndex + 1)
+        if self._activeIndex != self._maxindex:
+            self._setIndex(self._activeIndex + 1)
 
     def decrementIndex(self):
-        self.setIndex(self._activeIndex - 1)
+        if self._activeIndex != 0:
+            self._setIndex(self._activeIndex - 1)
 
-    def setIndex(self, index):
-        if index > self._maxindex:
-            self._clickcounter = self._maxindex
-            self._clkcounter = self._maxindex*2
-            self._activeIndex = index
-            self.cursor()
-        elif index < 0:
-            self._clickcounter = 0
-            self._clkcounter = 0
-            self._activeIndex = index
-            self.cursor()
+    def _setIndex(self, index):
+        self._activeIndex = index
+        self.cursor()
 
     def getIndex(self):
         return self._activeIndex
 
     def cursor(self):
         screenIndex = self._activeIndex - self._page*4
+
         while screenIndex < 0:
             screenIndex += 4
             self._page -= 1
             self.display()
+
         while screenIndex > 3:
             screenIndex -= 4
             self._page += 1
             self.display()
+
         for i in range(0,4):
             lcd.cursor_pos = i, 19
             lcd.write_string(" ")
@@ -127,13 +123,14 @@ class LCDmenu():
                 self._clkcounter += 0.5
             else:
                 self._clkcounter -= 0.5
-        if int(self._clkcounter) != self._clickcounter:
-            if self._clkcounter > self._clickcounter:
-                self.incrementIndex()
-            else:
-                self.decrementIndex()
 
-            self._clickcounter = int(self._clkcounter)
+            if int(self._clkcounter) >= 1:
+                self.incrementIndex()
+                self._clkcounter = 0
+            elif int(self._clkcounter) <= -1:
+                self.decrementIndex()
+                self._clkcounter = 0
+
             self.cursor()
         self._clklaststate = clkstate
 

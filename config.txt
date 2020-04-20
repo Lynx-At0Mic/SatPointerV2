@@ -1,7 +1,8 @@
 [GROUND STATION]
 LONG = 0
 LAT = 0
-ALT = 100 ; height in metres
+; height in metres
+ALT = 100
 
 [TLE]
 ; path to 2 line element file
@@ -24,6 +25,7 @@ STEPS PER REVOLUTION = 4096
 SERVO OFFSET = 90
 
 [GPIO]
+; encoder pins
 CLK = 17
 DT = 18
 SW = 23
