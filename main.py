@@ -22,8 +22,8 @@ dt = int(config["GPIO"]["DT"])
 sw = int(config["GPIO"]["SW"])
 
 io.setmode(io.BCM)  # initialise GPIO
-io.setup(clk, io.IN, pull_up_down=io.PUD_DOWN)
-io.setup(dt, io.IN, pull_up_down=io.PUD_DOWN)
+io.setup(clk, io.IN, pull_up_down=io.PUD_UP)
+io.setup(dt, io.IN, pull_up_down=io.PUD_UP)
 io.setup(sw, io.IN, pull_up_down=io.PUD_UP)
 
 # Globals
@@ -59,7 +59,7 @@ class LCDmenu():
         self._clklaststate = io.input(self._clk)
         self._clkcounter = 0
 
-        io.add_event_detect(self._clk, io.FALLING, callback=self.encoder_callback)
+        io.add_event_detect(self._clk, io.FALLING, callback=self._encoder_callback)
 
     def disable(self):
         lcd.clear()
@@ -69,7 +69,7 @@ class LCDmenu():
         lcd.clear()
         self.display()
         self.cursor()
-        io.add_event_detect(self._clk, io.FALLING, callback=self.encoder_callback)
+        io.add_event_detect(self._clk, io.FALLING, callback=self._encoder_callback)
 
     def display(self):
         lcd.clear()
@@ -80,19 +80,19 @@ class LCDmenu():
             lcd.write_string(str(self._items[i]))
             lcd.crlf()
 
-    def incrementIndex(self):
+    def increment_index(self):
         if self._activeIndex != self._maxindex:
-            self._setIndex(self._activeIndex + 1)
+            self._set_index(self._activeIndex + 1)
 
-    def decrementIndex(self):
+    def decrement_index(self):
         if self._activeIndex != 0:
-            self._setIndex(self._activeIndex - 1)
+            self._set_index(self._activeIndex - 1)
 
-    def _setIndex(self, index):
+    def _set_index(self, index):
         self._activeIndex = index
         self.cursor()
 
-    def getIndex(self):
+    def get_index(self):
         return self._activeIndex
 
     def cursor(self):
@@ -114,25 +114,17 @@ class LCDmenu():
         lcd.cursor_pos = screenIndex, 19
         lcd.write_string("<")
 
-    def encoder_callback(self, callback):
-        clkstate = io.input(self._clk)
-        dtstate = io.input(self._dt)
+    def _encoder_callback(self, callback):
+        io.remove_event_detect(self._clk)  # remove event temporarily to stop duplicate triggers
 
-        if clkstate != self._clklaststate:
-            if dtstate != clkstate:
-                self._clkcounter += 0.5
-            else:
-                self._clkcounter -= 0.5
+        dtstate = io.input(self._dt)  # get state of dt
 
-            if int(self._clkcounter) >= 1:
-                self.incrementIndex()
-                self._clkcounter = 0
-            elif int(self._clkcounter) <= -1:
-                self.decrementIndex()
-                self._clkcounter = 0
+        if dtstate == 1:  # clk is 0 due to trigger, if dt is 1 it turned right is its 0 it turned left
+            self.increment_index()
+        elif dtstate == 0:
+            self.decrement_index()
 
-            self.cursor()
-        self._clklaststate = clkstate
+        io.add_event_detect(self._clk, io.FALLING, callback=self._encoder_callback)  # add event back
 
 
 def get_az_el():
@@ -144,13 +136,16 @@ def get_az_el():
 
     if curSatellite != satelliteName:
         try:
-            sat_object = Orbital(satelliteName, tle_file=config["TLE"]["PATH"])
+            sat_object = Orbital(satelliteName, tle_file=str(config["TLE"]["PATH"]))
         except:
             lcd.clear()
             lcd.write_string("SAT NOT IN TLE")
             satelliteName = "None"
             sleep(3)
+            return
+        
         curSatellite = satelliteName
+        
     az, el = sat_object.get_observer_look(dateandtime, lng, lat, alt)
 
 
@@ -190,19 +185,19 @@ options_items = ["Back", "Change Target", "Quit"]
 
 def options():
     lcd.clear()
-    optionsMenu = LCDmenu(options_items, clk, dt)
-    optionsMenu.display()
-    optionsMenu.cursor()
+    options_menu = LCDmenu(options_items, clk, dt)
+    options_menu.display()
+    options_menu.cursor()
 
     io.wait_for_edge(sw, io.FALLING)
 
-    sel_index = optionsMenu.getIndex()
+    sel_index = options_menu.get_index()
 
     if sel_index == 0:
-        optionsMenu.disable()
+        options_menu.disable()
         return
     elif sel_index == 1:
-        optionsMenu.disable()
+        options_menu.disable()
         tracking_select()
     else:
         global exitFlag
@@ -212,15 +207,19 @@ def options():
 def tracking_select():
     global satelliteName
 
-    trackingMenu = LCDmenu(sat_list, clk, dt)
-    trackingMenu.display()
-    trackingMenu.cursor()
+    tracking_menu = LCDmenu(sat_list, clk, dt)
+    tracking_menu.display()
+    tracking_menu.cursor()
 
     io.wait_for_edge(sw, io.FALLING)
 
-    satelliteName = sat_list[trackingMenu.getIndex()]
+    satelliteName = sat_list[tracking_menu.get_index()]
 
-    trackingMenu.disable()
+    tracking_menu.disable()
+    
+
+def update_tle():
+    print()
 
 
 try:

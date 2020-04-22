@@ -6,19 +6,14 @@ ALT = 100
 
 [TLE]
 ; path to 2 line element file
-PATH = "tle.txt"
+PATH = tle.txt
 ; whitelisted satellites shown in menu. "None" has constant 0 az and -90 el
 WHITELIST = None
     NOAA 19
     NOAA 18
-    NOAA 15,
+    NOAA 15
     METEOR-M 2
     METEOR-M2 2
-    GOES 13
-    GOES 14
-    GOES 15
-    GOES 16
-    GOES 17
 
 [MOTION]
 STEPS PER REVOLUTION = 4096
@@ -28,4 +23,4 @@ SERVO OFFSET = 90
 ; encoder pins
 CLK = 17
 DT = 18
-SW = 23
+SW = 27
